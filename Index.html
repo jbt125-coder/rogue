@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Rogue Clone: Eternal Light</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<style>
+html,body{margin:0;background:black;color:white;font-family:monospace;overscroll-behavior:none;touch-action:manipulation;}
+#stats{padding:8px; border-bottom: 1px solid #444; font-size: 13px; line-height: 1.5; background: #0a0a0a;}
+#game{line-height:14px;font-size:14px;white-space:pre;margin-bottom:220px;}
+#log{padding:4px;height:80px;overflow-y:auto;border-top:1px solid white;background:#111;font-size:14px;}
+.wall{color:#3a6cff;}
+.wall-lit{color:#80aaff; text-shadow: 0 0 5px #3a6cff; font-weight:bold;}
+.floor{color:#444;}
+.gold-tile{color:#ffd700;}
+.stairs{color:#ff00ff;animation:blink 1s infinite;}
+@keyframes blink{0%,50%,100%{opacity:1;}25%,75%{opacity:0.2;}}
+.player{color:white;}
+.monster{color:#ff5555;}
+.merchant-tile{color:#00ff00; font-weight:bold;}
+#controls{position:fixed;bottom:0;width:100%;display:flex;justify-content:center;gap:10px;padding:8px;background:#111;}
+#dpad{display:grid;grid-template-columns:60px 60px 60px;grid-template-rows:60px 60px 60px;gap:4px;}
+#actions{display:flex;flex-direction:column;gap:6px;}
+button{background:#111;color:white;border:2px solid white;border-radius:8px;font-size:16px;touch-action:none;}
+button:active{background:white;color:black;}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,0.95);display:none;padding:20px;overflow-y:auto;z-index:100;border:2px solid white;margin:10px;}
+.shop-item{border-bottom:1px solid #444; padding:8px 0; display:flex; justify-content:space-between; align-items:center;}
+#titleScreen { background: linear-gradient(180deg, #1a0033 0%, #000 100%); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;}
+#titleScreen h1 { font-size: 42px; color: #ffd700; text-shadow: 3px 3px #ff00ff; margin-bottom: 10px; }
+.torch-ui { color: #ffa500; font-weight: bold; }
+pre { font-size: 12px; line-height: 12px; }
+</style>
+</head>
+<body>
+
+<div id="titleScreen" class="modal" style="display:flex;">
+    <h1>🤺 ROGUE CLONE</h1>
+    <p style="color:#00ff00;">THE DEPTHS AWAIT</p>
+    <div style="margin: 20px 0;">
+        <label>ENTER ADVENTURER NAME:</label><br>
+        <input type="text" id="playerNameInput" placeholder="Fencer" maxlength="12" style="font-size:20px; padding:8px; margin-top:10px; background:#222; color:white; border:2px solid #ffd700; text-align:center;">
+    </div>
+    <button onclick="startGame()" style="padding:15px 30px; font-size:20px; border-color:#00ff00; color:#00ff00;">START QUEST</button>
+</div>
+
+<div id="stats"></div>
+<div id="game"></div>
+<div id="log"></div>
+
+<div id="controls">
+    <div id="dpad">
+        <div></div><button ontouchstart="tap(move,0,-1)">▲</button><div></div>
+        <button ontouchstart="tap(move,-1,0)">◀</button>
+        <button ontouchstart="tap(waitTurn)">●</button>
+        <button ontouchstart="tap(move,1,0)">▶</button>
+        <div></div><button ontouchstart="tap(move,0,1)">▼</button><div></div>
+    </div>
+    <div id="actions">
+        <button ontouchstart="tap(openInventory)">INV</button>
+        <button ontouchstart="tap(descend)">></button>
+    </div>
+</div>
+
+<div id="inventory" class="modal"></div>
+<div id="merchant" class="modal"></div>
+<div id="rip" class="modal" style="text-align:center;"></div>
+
+<script>
+document.addEventListener('gesturestart',e=>e.preventDefault());
+function tap(fn,a,b){event.preventDefault();fn(a,b);}
+
+const MAP_W=120, MAP_H=80, VIEW_W=42, VIEW_H=26;
+let map=[], explored=[], rooms=[], monsters=[], goldPiles=[];
+let depth=1, merchantItems=[], merchantLoc={}, stairs={}, logMessages=[];
+let torchTime = 0, torchInterval = null;
+
+let player={
+    x:10, y:10, hp:30, maxHp:30, atk:3, def:1,
+    inventory:[], gold:5, xp:0, level:1,
+    equipment:{weapon:null, armor:null},
+    name:"Adventurer"
+};
+
+function effectiveAtk(){return player.atk + (player.equipment.weapon?.bonus||0);}
+function effectiveDef(){let d=player.def; if(player.equipment.armor) d+=player.equipment.armor.bonus; return d;}
+function addLog(msg){logMessages.push(msg); if(logMessages.length>5)logMessages.shift(); log.innerHTML=logMessages.join('<br>');}
+
+function updateExploration() {
+    // Torch Radius Logic (20 blocks)
+    if (torchTime > 0) {
+        let radius = 20;
+        for (let ry = player.y - radius; ry <= player.y + radius; ry++) {
+            for (let rx = player.x - radius; rx <= player.x + radius; rx++) {
+                if (ry >= 0 && ry < MAP_H && rx >= 0 && rx < MAP_W) {
+                    let dist = Math.sqrt((player.x - rx)**2 + (player.y - ry)**2);
+                    if (dist <= radius) explored[ry][rx] = true;
+                }
+            }
+        }
+    }
+
+    // Standard Room/Corridor Discovery
+    rooms.forEach(r => {
+        if (player.x >= r.x && player.x < r.x+r.w && player.y >= r.y && player.y < r.y+r.h) {
+            for(let ry=r.y; ry<r.y+r.h; ry++) for(let rx=r.x; rx<r.x+r.w; rx++) explored[ry][rx] = true;
+        }
+    });
+    for(let dy=-1; dy<=1; dy++) for(let dx=-1; dx<=1; dx++) if(explored[player.y+dy]) explored[player.y+dy][player.x+dx] = true;
+}
+
+function startTorch() {
+    if(torchInterval) clearInterval(torchInterval);
+    torchTime = 30;
+    addLog("You light a torch! The fog recedes in a wide circle.");
+    torchInterval = setInterval(() => {
+        torchTime--;
+        if(torchTime <= 0) { clearInterval(torchInterval); addLog("Your torch burns out."); }
+        updateExploration();
+        draw();
+    }, 1000);
+}
+
+const MONSTER_TYPES=[
+    {n:"Snake", g:"S", d:1, h:8, a:2},
+    {n:"Kobold", g:"K", d:1, h:12, a:3},
+    {n:"Orc", g:"O", d:3, h:20, a:5},
+    {n:"Troll", g:"T", d:6, h:45, a:10}
+];
+
+function generateLevel(){
+    map=[]; explored=[]; rooms=[]; monsters=[]; goldPiles=[];
+    for(let y=0;y<MAP_H;y++) { map.push(Array(MAP_W).fill('#')); explored.push(Array(MAP_W).fill(false)); }
+    for(let i=0; i<10; i++){
+        let w=5+rand(10), h=5+rand(7);
+        let x=1+rand(MAP_W-w-1), y=1+rand(MAP_H-h-1);
+        if(!rooms.some(r => x<r.x+r.w && x+w>r.x && y<r.y+r.h && y+h>r.y)){
+            rooms.push({x,y,w,h});
+            for(let ry=y; ry<y+h; ry++) for(let rx=x; rx<x+w; rx++) map[ry][rx]='.';
+        }
+    }
+    for(let i=1;i<rooms.length;i++){
+        let a=rooms[i-1], b=rooms[i], x1=a.x+2, y1=a.y+2, x2=b.x+2, y2=b.y+2;
+        if(rand(2)){
+            for(let x=Math.min(x1,x2); x<=Math.max(x1,x2); x++) map[y1][x]='.';
+            for(let y=Math.min(y1,y2); y<=Math.max(y1,y2); y++) map[y][x2]='.';
+        } else {
+            for(let y=Math.min(y1,y2); y<=Math.max(y1,y2); y++) map[y][x1]='.';
+            for(let x=Math.min(x1,x2); x<=Math.max(x1,x2); x++) map[y2][x]='.';
+        }
+    }
+    let last=rooms[rooms.length-1];
+    stairs={x:last.x+2, y:last.y+2}; map[stairs.y][stairs.x]='>';
+    merchantLoc={x:rooms[0].x+2, y:rooms[0].y+3}; map[merchantLoc.y][merchantLoc.x]='M';
+    rooms.forEach((r,i)=>{
+        if(i===0) return;
+        if(rand(10)<6){
+            let t = MONSTER_TYPES.filter(m=>depth>=m.d);
+            let mData = t[rand(t.length)];
+            monsters.push({name:mData.n, glyph:mData.g, x:r.x+1, y:r.y+1, hp:mData.h, atk:mData.a});
+        }
+        if(rand(10)<4) goldPiles.push({x:r.x+2, y:r.y+1, amt:10+rand(20)});
+    });
+    player.x=rooms[0].x+1; player.y=rooms[0].y+1;
+    merchantItems = [
+        {name:"🔥 Torch", type:"torch", cost:5},
+        {name:"🗺️ Magic Map", type:"usable", cost:30},
+        {name:"Steel Sword", type:"weapon", bonus:3, cost:50},
+        {name:"Leather Mail", type:"armor", bonus:3, cost:60}
+    ];
+    updateExploration();
+}
+
+function rand(n){return Math.floor(Math.random()*n);}
+
+function draw(){
+    let sx=Math.max(0,player.x-VIEW_W/2|0), sy=Math.max(0,player.y-VIEW_H/2|0), out="";
+    for(let y=sy;y<sy+VIEW_H;y++){
+        for(let x=sx;x<sx+VIEW_W;x++){
+            if(!explored[y]?.[x]) { out += " "; continue; }
+            let ch=map[y][x];
+            let isWall = ch==='#';
+            let cls=isWall?(torchTime>0?'wall-lit':'wall'):ch==='>'?'stairs':ch==='M'?'merchant-tile':'floor';
+            goldPiles.forEach(g=>{if(g.x===x&&g.y===y){ch='*';cls='gold-tile';}});
+            monsters.forEach(m=>{if(m.hp>0&&m.x===x&&m.y===y){ch=m.glyph;cls='monster';}});
+            if(player.x===x&&player.y===y){ch='🤺';cls='player';}
+            out+=`<span class="${cls}">${ch}</span>`;
+        }
+        out+='\n';
+    }
+    game.innerHTML=out;
+    let torchStatus = torchTime > 0 ? `<span class="torch-ui"> 🔥 ${torchTime}s</span>` : "";
+    stats.innerHTML = `
+        <span style="color:#ffd700">GOLD: ${player.gold}</span> | <b>HP:</b> ${player.hp}/${player.maxHp} | <b>ATK:</b> ${effectiveAtk()} ${torchStatus}<br>
+        <b>EQUIP:</b> [W: ${player.equipment.weapon?player.equipment.weapon.name:'None'}] [A: ${player.equipment.armor?player.equipment.armor.name:'None'}]
+    `;
+}
+
+function move(dx,dy){
+    let nx=player.x+dx, ny=player.y+dy;
+    if(map[ny][nx]==='#') return;
+    if(nx===merchantLoc.x && ny===merchantLoc.y){ openMerchant(); return; }
+    goldPiles.forEach((g,i)=>{if(g.x===nx&&g.y===ny){player.gold+=g.amt; addLog(`Picked up ${g.amt} gold!`); goldPiles.splice(i,1);}});
+    let target = monsters.find(m => m.hp > 0 && m.x === nx && m.y === ny);
+    if(target) {
+        let dmg = effectiveAtk(); target.hp -= dmg;
+        addLog(`You hit ${target.name} for ${dmg}.`);
+        if(target.hp <= 0) addLog(`${target.name} falls!`);
+    } else { player.x=nx; player.y=ny; }
+    updateExploration();
+    monsterTurn();
+    draw();
+}
+
+function monsterTurn(){
+    monsters.forEach(m=>{
+        if(m.hp <= 0) return;
+        let dist = Math.sqrt((player.x-m.x)**2 + (player.y-m.y)**2);
+        if(dist > 8) return; 
+        let dx=Math.sign(player.x-m.x), dy=Math.sign(player.y-m.y);
+        if(m.x+dx === player.x && m.y+dy === player.y) {
+            let dmg = Math.max(1, m.atk - effectiveDef());
+            player.hp -= dmg; addLog(`${m.name} hits for ${dmg}!`);
+            if(player.hp <= 0) die(m);
+        } else if(map[m.y+dy][m.x+dx] === '.') { m.x+=dx; m.y+=dy; }
+    });
+}
+
+function openMerchant(){
+    let m = document.getElementById('merchant');
+    m.style.display='block';
+    m.innerHTML='<h2 style="color:#00ff00">THE MERCHANT</h2>';
+    merchantItems.forEach((item, i) => {
+        m.innerHTML += `<div class="shop-item">
+            <span><b>${item.name}</b> - ${item.cost}g</span>
+            <button onclick="buyItem(${i})">BUY</button>
+        </div>`;
+    });
+    m.innerHTML += '<br><button onclick="document.getElementById(\'merchant\').style.display=\'none\'">Leave Shop</button>';
+}
+
+function buyItem(idx){
+    let item = merchantItems[idx];
+    if(player.gold >= item.cost){
+        player.gold -= item.cost;
+        player.inventory.push({...item});
+        addLog(`Bought ${item.name}!`);
+        openMerchant();
+        draw();
+    } else { alert("Not enough gold!"); }
+}
+
+function openInventory(){
+    let inv = document.getElementById('inventory');
+    inv.style.display='block';
+    inv.innerHTML='<h2>INVENTORY</h2>';
+    player.inventory.forEach((item, i) => {
+        inv.innerHTML += `<div class="shop-item">
+            <span>${item.name}</span>
+            <button onclick="handleItem(${i})">USE/EQUIP</button>
+        </div>`;
+    });
+    inv.innerHTML += '<br><button onclick="document.getElementById(\'inventory\').style.display=\'none\'">Close</button>';
+}
+
+function handleItem(n) {
+    let item = player.inventory[n];
+    if(item.type === "torch") { startTorch(); player.inventory.splice(n, 1); } 
+    else if(item.type === "usable") { for(let y=0; y<MAP_H; y++) for(let x=0; x<MAP_W; x++) explored[y][x] = true; player.inventory.splice(n, 1); } 
+    else {
+        if(item.type === "weapon") player.equipment.weapon = item;
+        if(item.type === "armor") player.equipment.armor = item;
+        player.inventory.splice(n,1);
+    }
+    document.getElementById('inventory').style.display='none';
+    draw();
+}
+
+function waitTurn(){ monsterTurn(); draw(); }
+function descend(){ if(player.x===stairs.x && player.y===stairs.y){ depth++; generateLevel(); draw(); } }
+
+function die(m){ 
+    let rip = document.getElementById('rip');
+    rip.style.display='block'; 
+    rip.innerHTML=`
+<pre style="display:inline-block; text-align:left;">
+      _________________
+     /                 \\
+    /    R. I. P.       \\
+   /                     \\
+  /   ${player.name.padEnd(14, ' ')}  \\
+ /    Killed by a        \\
+ |    ${m.name.padEnd(14, ' ')} |
+ |    On Floor ${depth.toString().padEnd(10, ' ')}|
+ |                       |
+ |      * * * * |
+ |_______________________|
+</pre>
+<br><button onclick="location.reload()" style="margin-top:20px; padding:10px 20px;">RESTART</button>`; 
+}
+
+function startGame(){ 
+    player.name = document.getElementById('playerNameInput').value || "Adventurer";
+    document.getElementById('titleScreen').style.display='none'; 
+    generateLevel(); 
+    draw(); 
+}
+</script>
+</body>
+</html>
