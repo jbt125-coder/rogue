@@ -5,113 +5,539 @@
 <title>Rogue Clone: Eternal Light</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <style>
-html,body{margin:0;background:black;color:white;font-family:monospace;overscroll-behavior:none;touch-action:manipulation;}
-#stats{padding:8px; border-bottom: 1px solid #444; font-size: 13px; line-height: 1.5; background: #0a0a0a;}
-#game{line-height:14px;font-size:14px;white-space:pre;margin-bottom:220px;}
-#log{padding:4px;height:80px;overflow-y:auto;border-top:1px solid white;background:#111;font-size:14px;}
+html,body{margin:0;background:black;color:white;font-family:monospace;overscroll-behavior:none;touch-action:manipulation;overflow:hidden;}
+#stats{padding:6px; border-bottom: 1px solid #444; font-size:12px; line-height: 1.4; background: #0a0a0a;}
+#bossBar{padding:6px; background:#1a0000; border-bottom:2px solid #ff0000; font-size:14px; font-weight:bold; display:none; text-align:center;}
+#game{line-height:14px;font-size:14px;white-space:pre;margin-bottom:200px;padding:4px;}
+
+#log {
+    padding: 6px;
+    width: 100%;
+    height: 100%;
+    max-height: 170px;
+    overflow-y: auto;
+    border: 1px solid white;
+    background: #111;
+    font-size: 12px;
+    line-height: 1.3;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
 .wall{color:#3a6cff;}
 .wall-lit{color:#80aaff; text-shadow: 0 0 5px #3a6cff; font-weight:bold;}
 .floor{color:#444;}
+.floor-victory{color:#228b22;}
 .gold-tile{color:#ffd700;}
 .stairs{color:#ff00ff;animation:blink 1s infinite;}
+.door{color:#8b4513;}
+.secret-door{color:#3a6cff;}
+.chest{color:#cd853f; font-weight:bold;}
+.trap{color:#ff0000; font-weight:bold;}
+.altar{color:#9370db; font-weight:bold;}
+.fountain{color:#00bfff; font-weight:bold;}
+.item-potion{color:#00ff00;}
+.item-scroll{color:#ffffe0;}
+.item-wand{color:#ffa500;}
+.item-ring{color:#ffd700; font-weight:bold;}
+.item-weapon{color:#c0c0c0;}
+.item-armor{color:#a9a9a9;}
+.item-food{color:#daa520;}
+.boss{color:#ff0000; font-size:18px; font-weight:bold; text-shadow: 0 0 10px #ff0000;}
 @keyframes blink{0%,50%,100%{opacity:1;}25%,75%{opacity:0.2;}}
 .player{color:white;}
 .monster{color:#ff5555;}
 .merchant-tile{color:#00ff00; font-weight:bold;}
-#controls{position:fixed;bottom:0;width:100%;display:flex;justify-content:center;gap:10px;padding:8px;background:#111;}
-#dpad{display:grid;grid-template-columns:60px 60px 60px;grid-template-rows:60px 60px 60px;gap:4px;}
-#actions{display:flex;flex-direction:column;gap:6px;}
-button{background:#111;color:white;border:2px solid white;border-radius:8px;font-size:16px;touch-action:none;}
+
+@keyframes shake {
+    0%, 100% { transform: translate(0, 0); }
+    10% { transform: translate(-8px, -8px); }
+    20% { transform: translate(8px, 8px); }
+    30% { transform: translate(-8px, 8px); }
+    40% { transform: translate(8px, -8px); }
+    50% { transform: translate(-8px, -8px); }
+    60% { transform: translate(8px, 8px); }
+    70% { transform: translate(-8px, 8px); }
+    80% { transform: translate(8px, -8px); }
+}
+
+@keyframes flashRed {
+    0%, 100% { background: black; }
+    50% { background: #330000; }
+}
+
+.shake-screen { animation: shake 0.8s; }
+.flash-screen { animation: flashRed 0.5s; }
+
+#controls{
+    position:fixed;
+    bottom:0;
+    width:100%;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    padding:6px;
+    background:#111;
+    box-sizing: border-box;
+    gap: 6px;
+}
+
+#dpad-container{
+    flex: 0 0 auto;
+}
+
+#dpad{
+    display:grid;
+    grid-template-columns:55px 55px 55px;
+    grid-template-rows:55px 55px 55px;
+    gap:3px;
+}
+
+#log-container{
+    flex: 1;
+    min-width: 0;
+}
+
+#action-buttons{
+    flex: 0 0 auto;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+}
+
+#action-buttons button{
+    width:80px;
+    height:80px;
+    font-size:16px;
+}
+
+button{
+    background:#111;
+    color:white;
+    border:2px solid white;
+    border-radius:8px;
+    font-size:15px;
+    touch-action:none;
+    user-select: none;
+}
 button:active{background:white;color:black;}
-.modal{position:fixed;inset:0;background:rgba(0,0,0,0.95);display:none;padding:20px;overflow-y:auto;z-index:100;border:2px solid white;margin:10px;}
-.shop-item{border-bottom:1px solid #444; padding:8px 0; display:flex; justify-content:space-between; align-items:center;}
-#titleScreen { background: linear-gradient(180deg, #1a0033 0%, #000 100%); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;}
-#titleScreen h1 { font-size: 42px; color: #ffd700; text-shadow: 3px 3px #ff00ff; margin-bottom: 10px; }
+
+.modal{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.95);
+    display:none;
+    padding:20px;
+    overflow-y:auto;
+    z-index:100;
+    border:2px solid white;
+    margin:10px;
+}
+
+.action-item{
+    border-bottom:1px solid #444;
+    padding:12px 8px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:16px;
+    cursor:pointer;
+}
+
+.action-item:hover{
+    background:#222;
+}
+
+.shop-item{
+    border-bottom:1px solid #444;
+    padding:8px 0;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+#titleScreen {
+    background: linear-gradient(180deg, #1a0033 0%, #000 100%);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+}
+
+#titleScreen h1 {
+    font-size: 42px;
+    color: #ffd700;
+    text-shadow: 3px 3px #ff00ff;
+    margin-bottom: 10px;
+}
+
 .torch-ui { color: #ffa500; font-weight: bold; }
+.status-effect { color: #ff69b4; font-weight: bold; }
+.level-up { color: #ffd700; font-weight: bold; }
 pre { font-size: 12px; line-height: 12px; }
+
+@keyframes pulseGlow {
+    0% { box-shadow: 0 0 5px #444; border-color: #888; }
+    50% { box-shadow: 0 0 20px #d1d1d1; border-color: #fff; }
+    100% { box-shadow: 0 0 5px #444; border-color: #888; }
+}
+.pulse-btn { animation: pulseGlow 2s infinite; }
+
+.identified { color: #90ee90; }
+.unidentified { color: #ffa500; }
+.cursed { color: #ff4444; }
 </style>
 </head>
 <body>
 
 <div id="titleScreen" class="modal" style="display:flex;">
-    <h1>🤺 ROGUE CLONE</h1>
+    <h1>🤺 ROGUE SCIENCE CLONE</h1>
+    <p id="highScoreText" style="color:#ffd700; font-weight:bold;"></p>
     <p style="color:#00ff00;">THE DEPTHS AWAIT</p>
     <div style="margin: 20px 0;">
         <label>ENTER ADVENTURER NAME:</label><br>
-        <input type="text" id="playerNameInput" placeholder="Fencer" maxlength="12" style="font-size:20px; padding:8px; margin-top:10px; background:#222; color:white; border:2px solid #ffd700; text-align:center;">
+        <input type="text" id="playerNameInput" placeholder="Your Name" maxlength="12" style="font-size:20px; padding:8px; margin-top:10px; background:#222; color:white; border:2px solid #ffd700; text-align:center;">
     </div>
     <button onclick="startGame()" style="padding:15px 30px; font-size:20px; border-color:#00ff00; color:#00ff00;">START QUEST</button>
 </div>
 
 <div id="stats"></div>
+<div id="bossBar"></div>
 <div id="game"></div>
-<div id="log"></div>
 
 <div id="controls">
-    <div id="dpad">
-        <div></div><button ontouchstart="tap(move,0,-1)">▲</button><div></div>
-        <button ontouchstart="tap(move,-1,0)">◀</button>
-        <button ontouchstart="tap(waitTurn)">●</button>
-        <button ontouchstart="tap(move,1,0)">▶</button>
-        <div></div><button ontouchstart="tap(move,0,1)">▼</button><div></div>
+    <div id="dpad-container">
+        <div id="dpad">
+            <div></div><button id="btnUp">▲</button><div></div>
+            <button id="btnLeft">◀</button>
+            <button id="btnSearch">🔍</button>
+            <button id="btnRight">▶</button>
+            <div></div><button id="btnDown">▼</button><div></div>
+        </div>
     </div>
-    <div id="actions">
-        <button ontouchstart="tap(openInventory)">INV</button>
-        <button ontouchstart="tap(descend)">></button>
+    <div id="log-container">
+        <div id="log"></div>
+    </div>
+    <div id="action-buttons">
+        <button ontouchstart="tap(openInventory)" onclick="openInventory()">🎒<br>INV</button>
+        <button ontouchstart="tap(openActionMenu)" onclick="openActionMenu()">⚡<br>ACT</button>
     </div>
 </div>
 
+<div id="actionMenu" class="modal"></div>
 <div id="inventory" class="modal"></div>
+<div id="scrollList" class="modal"></div>
+<div id="potionList" class="modal"></div>
+<div id="wandList" class="modal"></div>
 <div id="merchant" class="modal"></div>
-<div id="rip" class="modal" style="text-align:center;"></div>
+<div id="bossWarning" class="modal"></div>
+<div id="rip" class="modal" style="text-align:center; overflow:hidden;"></div>
 
 <script>
+if(localStorage.getItem('rogueBestFloor')) {
+    document.getElementById('highScoreText').innerText = "BEST DESCENT: FLOOR " + localStorage.getItem('rogueBestFloor');
+}
+
 document.addEventListener('gesturestart',e=>e.preventDefault());
 function tap(fn,a,b){event.preventDefault();fn(a,b);}
 
+// Hold-to-move functionality
+let moveInterval = null;
+let moveTimeout = null;
+
+function startMove(dx, dy) {
+    move(dx, dy);
+    moveTimeout = setTimeout(() => {
+        moveInterval = setInterval(() => move(dx, dy), 150);
+    }, 300);
+}
+
+function stopMove() {
+    if (moveTimeout) clearTimeout(moveTimeout);
+    if (moveInterval) clearInterval(moveInterval);
+    moveTimeout = null;
+    moveInterval = null;
+}
+
+// Set up hold-to-move for all direction buttons
+['btnUp', 'btnDown', 'btnLeft', 'btnRight'].forEach(id => {
+    const btn = document.getElementById(id);
+    const dirs = {btnUp:[0,-1], btnDown:[0,1], btnLeft:[-1,0], btnRight:[1,0]};
+    const [dx, dy] = dirs[id];
+    
+    btn.addEventListener('mousedown', () => startMove(dx, dy));
+    btn.addEventListener('mouseup', stopMove);
+    btn.addEventListener('mouseleave', stopMove);
+    
+    btn.addEventListener('touchstart', (e) => { e.preventDefault(); startMove(dx, dy); });
+    btn.addEventListener('touchend', (e) => { e.preventDefault(); stopMove(); });
+    btn.addEventListener('touchcancel', (e) => { e.preventDefault(); stopMove(); });
+});
+
+document.getElementById('btnSearch').addEventListener('click', searchArea);
+document.getElementById('btnSearch').addEventListener('touchstart', (e) => { e.preventDefault(); searchArea(); });
+
+document.addEventListener('keydown', (e) => {
+    if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Tab'].includes(e.key)) e.preventDefault();
+    switch(e.key) {
+        case 'ArrowUp': move(0, -1); break;
+        case 'ArrowDown': move(0, 1); break;
+        case 'ArrowLeft': move(-1, 0); break;
+        case 'ArrowRight': move(1, 0); break;
+        case 'i': case 'I': case 'Tab': openInventory(); break;
+        case '>': case '.': descend(); break;
+        case 'r': case 'R': openScrollList(); break;
+        case 'q': case 'Q': openPotionList(); break;
+        case 'z': case 'Z': openWandList(); break;
+        case 's': case 'S': searchArea(); break;
+    }
+});
+
 const MAP_W=120, MAP_H=80, VIEW_W=42, VIEW_H=26;
-let map=[], explored=[], rooms=[], monsters=[], goldPiles=[];
+let map=[], explored=[], rooms=[], monsters=[], goldPiles=[], items=[], doors=[], chests=[], traps=[], altars=[], fountains=[];
 let depth=1, merchantItems=[], merchantLoc={}, stairs={}, logMessages=[];
 let torchTime = 0, torchInterval = null;
+let healPotionPrice = 10, healPotionAvailable = true;
+let turnCount = 0;
+let prestigeLevel = 0;
+let bossDefeated = null;
+let isBossRoom = false;
+let boss = null;
+let victoryMode = false;
+
+const BOSS_DATA = [
+    {emoji:"🧟", name:"Undead Guardian", spawns:["Bat"], hp:300},
+    {emoji:"🧛", name:"Blood Lord", spawns:["Snake","Emu"], hp:350},
+    {emoji:"🧙‍♂️", name:"Dark Sorcerer", spawns:["Orc","Hobgoblin"], hp:400},
+    {emoji:"🧞", name:"Djinn of Chaos", spawns:["Troll","Griffin"], hp:450},
+    {emoji:"🧚", name:"Ethereal Queen", spawns:["Dragon","Jabberwock"], hp:500}
+];
+
+const PRESTIGE_COLORS = [
+    {wall: '#3a6cff', lit: '#80aaff'}, // Blue
+    {wall: '#ff3a3a', lit: '#ff8080'}, // Red
+    {wall: '#3aff3a', lit: '#80ff80'}, // Green  
+    {wall: '#9370db', lit: '#c9a0ff'}, // Purple
+    {wall: '#ffd700', lit: '#ffe866'}  // Gold
+];
+
+let scrollColors = ["red","blue","green","yellow","purple","orange","pink","cyan","white","black"];
+let potionColors = ["clear","murky","fizzing","glowing","dark","bubbling","smoky","shimmering","oily","thick"];
+let wandMaterials = ["oak","ash","yew","pine","crystal","bone","iron","silver","gold","obsidian"];
+let ringGems = ["ruby","sapphire","emerald","diamond","amethyst","topaz","opal","pearl","onyx","jade"];
+let identifiedItems = {scrolls:{}, potions:{}, wands:{}, rings:{}};
 
 let player={
-    x:10, y:10, hp:30, maxHp:30, atk:3, def:1,
-    inventory:[], gold:5, xp:0, level:1,
-    equipment:{weapon:null, armor:null},
-    name:"Adventurer"
+    x:10, y:10, hp:30, maxHp:30, atk:3, def:1, str:16,
+    inventory:[], gold:10, xp:0, level:1, luck:5,
+    xpToNext: 100,
+    equipment:{weapon:null, armor:null, shield:null, leftRing:null, rightRing:null},
+    name:"Adventurer",
+    poisoned:0, frozen:0, confused:0, blind:0, hasted:0, invulnerable:0, invisible:0,
+    hunger:1000, hungerRate:1
 };
 
-function effectiveAtk(){return player.atk + (player.equipment.weapon?.bonus||0);}
-function effectiveDef(){let d=player.def; if(player.equipment.armor) d+=player.equipment.armor.bonus; return d;}
-function addLog(msg){logMessages.push(msg); if(logMessages.length>5)logMessages.shift(); log.innerHTML=logMessages.join('<br>');}
+const MONSTER_TYPES = [
+    {n:"Bat", g:"B", d:1, h:5, a:1, def:0, ai:"erratic"},
+    {n:"Snake", g:"S", d:1, h:8, a:2, def:0, ai:"chase"},
+    {n:"Emu", g:"E", d:2, h:10, a:2, def:1, ai:"fast"},
+    {n:"Kestrel", g:"K", d:2, h:12, a:3, def:0, ai:"hitrun"},
+    {n:"Hobgoblin", g:"H", d:3, h:15, a:3, def:1, ai:"pack"},
+    {n:"Quagga", g:"Q", d:4, h:18, a:4, def:1, ai:"charge"},
+    {n:"Centaur", g:"C", d:4, h:22, a:5, def:2, ai:"ranged"},
+    {n:"Orc", g:"O", d:5, h:20, a:5, def:1, ai:"chase"},
+    {n:"Aquator", g:"A", d:6, h:25, a:4, def:2, ai:"ambush", special:"rust"},
+    {n:"Rattlesnake", g:"R", d:6, h:20, a:6, def:1, ai:"defensive", special:"poison"},
+    {n:"Leprechaun", g:"L", d:7, h:18, a:3, def:3, ai:"thief", special:"steal_gold"},
+    {n:"Venus Flytrap", g:"F", d:7, h:30, a:7, def:1, ai:"stationary"},
+    {n:"Ice Monster", g:"I", d:8, h:35, a:7, def:3, ai:"slow", special:"freeze"},
+    {n:"Nymph", g:"N", d:9, h:28, a:5, def:2, ai:"stealth", special:"steal_item"},
+    {n:"Troll", g:"T", d:10, h:45, a:10, def:3, ai:"regen", drops:["Iron Shield","Frost Buckler"]},
+    {n:"Griffin", g:"G", d:10, h:50, a:11, def:4, ai:"flying", drops:["Long Sword"]},
+    {n:"Phantom", g:"P", d:11, h:40, a:9, def:5, ai:"invisible"},
+    {n:"Ur-vile", g:"U", d:12, h:55, a:12, def:4, ai:"summoner", drops:["Two-Handed Sword","Chainmail"]},
+    {n:"Medusa", g:"M", d:12, h:48, a:10, def:3, ai:"gaze", special:"confuse", drops:["Chainmail"]},
+    {n:"Yeti", g:"Y", d:13, h:60, a:13, def:5, ai:"berserker", drops:["Tower Shield"]},
+    {n:"Wraith", g:"W", d:14, h:55, a:14, def:6, ai:"phase", special:"drain"},
+    {n:"Vampire", g:"V", d:15, h:65, a:15, def:5, ai:"lifesteal", drops:["Crystal Platemail"]},
+    {n:"Zombie", g:"Z", d:16, h:70, a:12, def:7, ai:"horde"},
+    {n:"Xeroc", g:"X", d:17, h:75, a:16, def:6, ai:"mimic"},
+    {n:"Jabberwock", g:"J", d:18, h:90, a:18, def:7, ai:"smart"},
+    {n:"Dragon", g:"D", d:20, h:120, a:20, def:8, ai:"boss", special:"breath"}
+];
+
+const WEAPONS = [
+    {name:"Mace", damage:"2d4", bonus:2, cost:15, level:1},
+    {name:"Dagger", damage:"1d6", bonus:1, cost:10, level:1},
+    {name:"Long Sword", damage:"3d4", bonus:3, cost:50, level:2},
+    {name:"Spear", damage:"2d3", bonus:2, cost:30, level:1},
+    {name:"Two-Handed Sword", damage:"4d4", bonus:4, cost:100, level:4},
+    {name:"Shortbow", damage:"1d1", bonus:1, cost:25, level:1, ranged:true},
+    {name:"Arrow", damage:"2d3", bonus:2, cost:2, level:1, ammo:true, stackable:true},
+    {name:"Dart", damage:"1d3", bonus:1, cost:3, level:1, thrown:true, stackable:true},
+    {name:"Shuriken", damage:"2d4", bonus:2, cost:5, level:2, thrown:true, stackable:true}
+];
+
+const ARMOR = [
+    {name:"Robes", bonus:1, cost:0, level:0},
+    {name:"Leather Armor", bonus:2, cost:10, level:1},
+    {name:"Leather Mail", bonus:3, cost:60, level:1},
+    {name:"Chainmail", bonus:5, cost:200, level:4},
+    {name:"Crystal Platemail", bonus:7, cost:400, level:6}
+];
+
+const SHIELDS = [
+    {name:"Wooden Shield", bonus:1, durability:20, cost:10, level:1},
+    {name:"Iron Shield", bonus:2, durability:50, cost:80, level:1},
+    {name:"Frost Buckler", bonus:3, durability:60, cost:120, level:2},
+    {name:"Tower Shield", bonus:5, durability:150, cost:320, level:5}
+];
+
+const SCROLLS = [
+    {name:"Identify", effect:"identify"},
+    {name:"Magic Mapping", effect:"map"},
+    {name:"Enchant Weapon", effect:"enchant_weapon"},
+    {name:"Enchant Armor", effect:"enchant_armor"},
+    {name:"Remove Curse", effect:"remove_curse"},
+    {name:"Teleportation", effect:"teleport"},
+    {name:"Light", effect:"light"},
+    {name:"Confuse Monster", effect:"confuse_monster"},
+    {name:"Scare Monster", effect:"scare_monster"},
+    {name:"Hold Monster", effect:"hold_monster"},
+    {name:"Create Monster", effect:"create_monster"},
+    {name:"Aggravate Monsters", effect:"aggravate"}
+];
+
+const POTIONS = [
+    {name:"Healing", effect:"heal", amount:10},
+    {name:"Extra Healing", effect:"heal", amount:25},
+    {name:"Full Healing", effect:"full_heal"},
+    {name:"Strength", effect:"strength"},
+    {name:"Poison", effect:"poison"},
+    {name:"Confusion", effect:"confusion"},
+    {name:"Blindness", effect:"blindness"},
+    {name:"Haste", effect:"haste"},
+    {name:"Detect Objects", effect:"detect_objects"},
+    {name:"See Invisible", effect:"see_invisible"},
+    {name:"Invulnerability", effect:"invulnerable"}
+];
+
+const WANDS = [
+    {name:"Magic Missile", effect:"magic_missile", charges:[10,15]},
+    {name:"Lightning", effect:"lightning", charges:[8,12]},
+    {name:"Fire", effect:"fire", charges:[6,10]},
+    {name:"Cold", effect:"cold", charges:[8,12]},
+    {name:"Polymorph", effect:"polymorph", charges:[5,8]},
+    {name:"Slow Monster", effect:"slow", charges:[10,15]},
+    {name:"Teleport Monster", effect:"teleport_monster", charges:[6,10]},
+    {name:"Sleep", effect:"sleep", charges:[8,12]},
+    {name:"Death", effect:"death", charges:[3,6]}
+];
+
+const RINGS = [
+    {name:"Regeneration", effect:"regen"},
+    {name:"Protection", effect:"protection", bonus:2},
+    {name:"Strength", effect:"strength", bonus:2},
+    {name:"Searching", effect:"searching"},
+    {name:"See Invisible", effect:"see_invisible"},
+    {name:"Stealth", effect:"stealth"},
+    {name:"Aggravate Monster", effect:"aggravate", cursed:true},
+    {name:"Teleportation", effect:"teleport_random", cursed:true}
+];
+
+function rollDice(dice) {
+    let [num, sides] = dice.split('d').map(Number);
+    let total = 0;
+    for(let i=0; i<num; i++) total += 1 + rand(sides);
+    return total;
+}
+
+function effectiveAtk(){
+    let atk = player.atk + Math.floor((player.str - 16) / 2);
+    if(player.equipment.weapon) {
+        atk += player.equipment.weapon.bonus || 0;
+    }
+    if(player.equipment.leftRing?.effect === "strength") atk += player.equipment.leftRing.bonus || 0;
+    if(player.equipment.rightRing?.effect === "strength") atk += player.equipment.rightRing.bonus || 0;
+    return atk;
+}
+
+function effectiveDef(){
+    let def = player.def;
+    if(player.equipment.armor) def += player.equipment.armor.bonus;
+    if(player.equipment.shield) def += player.equipment.shield.bonus;
+    if(player.equipment.leftRing?.effect === "protection") def += player.equipment.leftRing.bonus || 0;
+    if(player.equipment.rightRing?.effect === "protection") def += player.equipment.rightRing.bonus || 0;
+    return def;
+}
+
+function gainXP(amount) {
+    player.xp += amount;
+    addLog(`+${amount} XP`);
+    
+    while(player.xp >= player.xpToNext) {
+        levelUp();
+    }
+}
+
+function levelUp() {
+    player.level++;
+    player.xp -= player.xpToNext;
+    player.xpToNext = Math.floor(100 * Math.pow(1.5, player.level - 1));
+    
+    let hpGain = 5 + rand(6);
+    let strGain = 1 + rand(2);
+    
+    player.maxHp += hpGain;
+    player.hp = player.maxHp;
+    player.str += strGain;
+    player.atk += Math.floor(strGain / 2);
+    player.luck += 1;
+    
+    addLog(`<span class="level-up">⭐ LEVEL UP! Now level ${player.level}!</span>`);
+    addLog(`+${hpGain} HP, +${strGain} STR, +1 LUCK`);
+}
+
+function addLog(msg){
+    logMessages.push(msg);
+    if(logMessages.length>12) logMessages.shift();
+    let logEl = document.getElementById('log');
+    logEl.innerHTML=logMessages.join('<br>');
+    logEl.scrollTop = logEl.scrollHeight;
+}
 
 function updateExploration() {
-    // Torch Radius Logic (20 blocks)
     if (torchTime > 0) {
         let radius = 20;
         for (let ry = player.y - radius; ry <= player.y + radius; ry++) {
             for (let rx = player.x - radius; rx <= player.x + radius; rx++) {
                 if (ry >= 0 && ry < MAP_H && rx >= 0 && rx < MAP_W) {
-                    let dist = Math.sqrt((player.x - rx)**2 + (player.y - ry)**2);
-                    if (dist <= radius) explored[ry][rx] = true;
+                    let d = Math.sqrt((player.x - rx)**2 + (player.y - ry)**2);
+                    if (d <= radius) explored[ry][rx] = true;
                 }
             }
         }
     }
 
-    // Standard Room/Corridor Discovery
     rooms.forEach(r => {
         if (player.x >= r.x && player.x < r.x+r.w && player.y >= r.y && player.y < r.y+r.h) {
-            for(let ry=r.y; ry<r.y+r.h; ry++) for(let rx=r.x; rx<r.x+r.w; rx++) explored[ry][rx] = true;
+            for(let ry=r.y; ry<r.y+r.h; ry++) {
+                for(let rx=r.x; rx<r.x+r.w; rx++) {
+                    explored[ry][rx] = true;
+                }
+            }
         }
     });
-    for(let dy=-1; dy<=1; dy++) for(let dx=-1; dx<=1; dx++) if(explored[player.y+dy]) explored[player.y+dy][player.x+dx] = true;
+    for(let dy=-1; dy<=1; dy++) for(let dx=-1; dx<=1; dx++) {
+        if(explored[player.y+dy]) explored[player.y+dy][player.x+dx] = true;
+    }
 }
 
 function startTorch() {
     if(torchInterval) clearInterval(torchInterval);
     torchTime = 30;
-    addLog("You light a torch! The fog recedes in a wide circle.");
+    addLog("You light a torch!");
     torchInterval = setInterval(() => {
         torchTime--;
         if(torchTime <= 0) { clearInterval(torchInterval); addLog("Your torch burns out."); }
@@ -120,16 +546,82 @@ function startTorch() {
     }, 1000);
 }
 
-const MONSTER_TYPES=[
-    {n:"Snake", g:"S", d:1, h:8, a:2},
-    {n:"Kobold", g:"K", d:1, h:12, a:3},
-    {n:"Orc", g:"O", d:3, h:20, a:5},
-    {n:"Troll", g:"T", d:6, h:45, a:10}
-];
+function generateBossRoom() {
+    isBossRoom = true;
+    map=[]; explored=[]; rooms=[]; monsters=[]; goldPiles=[]; items=[]; doors=[]; chests=[]; traps=[]; altars=[]; fountains=[];
+    for(let y=0;y<MAP_H;y++) { map.push(Array(MAP_W).fill('#')); explored.push(Array(MAP_W).fill(false)); }
+    
+    let bossRoomSize = 25;
+    let bossRoom = {x: 30, y: 25, w: bossRoomSize, h: bossRoomSize};
+    rooms.push(bossRoom);
+    
+    for(let ry=bossRoom.y; ry<bossRoom.y+bossRoom.h; ry++) {
+        for(let rx=bossRoom.x; rx<bossRoom.x+bossRoom.w; rx++) {
+            map[ry][rx]='.';
+        }
+    }
+    
+    // Random traps
+    for(let i=0; i<20; i++) {
+        let trapTypes = ['^','v','~','"','!','_'];
+        let tx = bossRoom.x + 2 + rand(bossRoom.w - 4);
+        let ty = bossRoom.y + 2 + rand(bossRoom.h - 4);
+        traps.push({x:tx, y:ty, type:trapTypes[rand(trapTypes.length)], discovered:false});
+    }
+    
+    // Spawn boss
+    let bossData = BOSS_DATA[Math.min(prestigeLevel, BOSS_DATA.length - 1)];
+    let bossMultiplier = 1 + (prestigeLevel * 0.1);
+    boss = {
+        name: bossData.name,
+        glyph: bossData.emoji,
+        x: bossRoom.x + Math.floor(bossRoom.w/2),
+        y: bossRoom.y + Math.floor(bossRoom.h/2),
+        hp: Math.floor(bossData.hp * bossMultiplier),
+        maxHp: Math.floor(bossData.hp * bossMultiplier),
+        atk: 15 + (prestigeLevel * 3),
+        def: 5 + prestigeLevel,
+        spawns: bossData.spawns,
+        totalDamage: 0
+    };
+    
+    player.x = bossRoom.x + 1;
+    player.y = bossRoom.y + 1;
+    
+    updateExploration();
+    
+    // Screen shake effect
+    document.body.classList.add('flash-screen');
+    setTimeout(() => {
+        document.body.classList.remove('flash-screen');
+        document.body.classList.add('shake-screen');
+        setTimeout(() => document.body.classList.remove('shake-screen'), 800);
+    }, 500);
+    
+    addLog(`💀 THE ${boss.name.toUpperCase()} AWAKENS!`);
+    updateBossBar();
+}
+
+function updateBossBar() {
+    if(!boss || boss.hp <= 0) {
+        document.getElementById('bossBar').style.display = 'none';
+        return;
+    }
+    
+    let barWidth = Math.floor((boss.hp / boss.maxHp) * 30);
+    let bar = '█'.repeat(barWidth) + '░'.repeat(30 - barWidth);
+    document.getElementById('bossBar').style.display = 'block';
+    document.getElementById('bossBar').innerHTML = `${boss.glyph} ${boss.name.toUpperCase()} | HP: ${bar} ${boss.hp}/${boss.maxHp} | DMG DEALT: ${boss.totalDamage}`;
+}
 
 function generateLevel(){
-    map=[]; explored=[]; rooms=[]; monsters=[]; goldPiles=[];
+    isBossRoom = false;
+    boss = null;
+    document.getElementById('bossBar').style.display = 'none';
+    
+    map=[]; explored=[]; rooms=[]; monsters=[]; goldPiles=[]; items=[]; doors=[]; chests=[]; traps=[]; altars=[]; fountains=[];
     for(let y=0;y<MAP_H;y++) { map.push(Array(MAP_W).fill('#')); explored.push(Array(MAP_W).fill(false)); }
+    
     for(let i=0; i<10; i++){
         let w=5+rand(10), h=5+rand(7);
         let x=1+rand(MAP_W-w-1), y=1+rand(MAP_H-h-1);
@@ -138,6 +630,7 @@ function generateLevel(){
             for(let ry=y; ry<y+h; ry++) for(let rx=x; rx<x+w; rx++) map[ry][rx]='.';
         }
     }
+    
     for(let i=1;i<rooms.length;i++){
         let a=rooms[i-1], b=rooms[i], x1=a.x+2, y1=a.y+2, x2=b.x+2, y2=b.y+2;
         if(rand(2)){
@@ -148,26 +641,109 @@ function generateLevel(){
             for(let x=Math.min(x1,x2); x<=Math.max(x1,x2); x++) map[y2][x]='.';
         }
     }
+    
+    rooms.forEach(r => {
+        if(rand(100) < 40) {
+            let doorX = r.x + rand(r.w);
+            let doorY = r.y;
+            if(map[doorY][doorX] === '.') {
+                doors.push({x:doorX, y:doorY, open:false, locked:rand(100)<20, secret:false});
+                map[doorY][doorX] = '+';
+            }
+        }
+    });
+    
     let last=rooms[rooms.length-1];
     stairs={x:last.x+2, y:last.y+2}; map[stairs.y][stairs.x]='>';
     merchantLoc={x:rooms[0].x+2, y:rooms[0].y+3}; map[merchantLoc.y][merchantLoc.x]='M';
+    
+    let difficultyMultiplier = 1 + (prestigeLevel * 0.1);
+    
     rooms.forEach((r,i)=>{
         if(i===0) return;
-        if(rand(10)<6){
-            let t = MONSTER_TYPES.filter(m=>depth>=m.d);
-            let mData = t[rand(t.length)];
-            monsters.push({name:mData.n, glyph:mData.g, x:r.x+1, y:r.y+1, hp:mData.h, atk:mData.a});
+        if(rand(10)<7){
+            let valid = MONSTER_TYPES.filter(m=>depth>=m.d && depth<=m.d+5);
+            if(valid.length > 0) {
+                let mData = valid[rand(valid.length)];
+                let scaledHP = Math.floor(mData.h * (1 + depth * 0.05) * difficultyMultiplier);
+                let scaledATK = Math.floor((mData.a + Math.floor(depth / 3)) * difficultyMultiplier);
+                monsters.push({
+                    name:mData.n, glyph:mData.g, x:r.x+1, y:r.y+1, 
+                    hp:scaledHP, maxHp:scaledHP, atk:scaledATK, def:mData.def||0,
+                    ai:mData.ai, special:mData.special, drops:mData.drops||[], turnSkip:0,
+                    depth:mData.d
+                });
+            }
         }
-        if(rand(10)<4) goldPiles.push({x:r.x+2, y:r.y+1, amt:10+rand(20)});
+        
+        if(rand(10)<4) goldPiles.push({x:r.x+2, y:r.y+1, amt:10+rand(30)});
+        
+        if(rand(100)<30) {
+            let chestType = rand(100) < 60 ? '=' : '$';
+            let trapped = rand(100) < 25;
+            let locked = rand(100) < 40;
+            chests.push({x:r.x+rand(r.w), y:r.y+rand(r.h), type:chestType, trapped, locked, opened:false});
+        }
+        
+        if(rand(100)<20) {
+            let trapTypes = ['^','v','~','"','!','_'];
+            traps.push({x:r.x+rand(r.w), y:r.y+rand(r.h), type:trapTypes[rand(trapTypes.length)], discovered:false});
+        }
+        
+        if(rand(100)<25) spawnRandomItem(r.x+rand(r.w), r.y+rand(r.h));
+        
+        if(rand(100)<10) {
+            altars.push({x:r.x+rand(r.w), y:r.y+rand(r.h)});
+        }
+        
+        if(rand(100)<15) {
+            fountains.push({x:r.x+rand(r.w), y:r.y+rand(r.h), uses:3});
+        }
     });
+    
     player.x=rooms[0].x+1; player.y=rooms[0].y+1;
+    healPotionAvailable = true;
+    
     merchantItems = [
         {name:"🔥 Torch", type:"torch", cost:5},
-        {name:"🗺️ Magic Map", type:"usable", cost:30},
-        {name:"Steel Sword", type:"weapon", bonus:3, cost:50},
-        {name:"Leather Mail", type:"armor", bonus:3, cost:60}
+        {name:"🍖 Food Ration", type:"food", cost:10},
+        {name:"📜 Magic Map Scroll", type:"scroll", subtype:"Magic Mapping", effect:"map", cost: 50 + (depth * 10)}
     ];
+    
+    WEAPONS.filter(w=>w.level<=depth).forEach(w=>merchantItems.push({...w, type:"weapon"}));
+    ARMOR.filter(a=>a.level<=depth && a.level > 0).forEach(a=>merchantItems.push({...a, type:"armor"}));
+    SHIELDS.filter(s=>s.level<=depth).forEach(s=>merchantItems.push({...s, type:"shield"}));
+    
     updateExploration();
+}
+
+function spawnRandomItem(x, y) {
+    let type = rand(100);
+    if(type < 30) {
+        let validPotions = POTIONS.filter(p => {
+            if(depth < 3 && p.name === "Full Healing") return false;
+            if(depth < 5 && p.name === "Invulnerability") return false;
+            return true;
+        });
+        let pot = validPotions[rand(validPotions.length)];
+        items.push({x, y, type:'potion', subtype:pot.name, effect:pot.effect, amount:pot.amount, glyph:'!'});
+    } else if(type < 55) {
+        let scr = SCROLLS[rand(SCROLLS.length)];
+        items.push({x, y, type:'scroll', subtype:scr.name, effect:scr.effect, glyph:'?'});
+    } else if(type < 70) {
+        if(depth >= 3) {
+            let wnd = WANDS[rand(WANDS.length)];
+            let charges = wnd.charges[0] + rand(wnd.charges[1] - wnd.charges[0]);
+            items.push({x, y, type:'wand', subtype:wnd.name, effect:wnd.effect, charges, maxCharges:charges, glyph:'/'});
+        }
+    } else if(type < 85) {
+        if(depth >= 4) {
+            let rng = RINGS[rand(RINGS.length)];
+            items.push({x, y, type:'ring', subtype:rng.name, effect:rng.effect, bonus:rng.bonus, cursed:rng.cursed||false, glyph:'°'});
+        }
+    } else {
+        items.push({x, y, type:'food', subtype:'Ration', glyph:'%'});
+    }
 }
 
 function rand(n){return Math.floor(Math.random()*n);}
@@ -178,131 +754,1025 @@ function draw(){
         for(let x=sx;x<sx+VIEW_W;x++){
             if(!explored[y]?.[x]) { out += " "; continue; }
             let ch=map[y][x];
-            let isWall = ch==='#';
-            let cls=isWall?(torchTime>0?'wall-lit':'wall'):ch==='>'?'stairs':ch==='M'?'merchant-tile':'floor';
+            let colorIdx = Math.min(prestigeLevel, PRESTIGE_COLORS.length - 1);
+            let cls=ch==='#'?(torchTime>0?'wall-lit':'wall'):ch==='>'?'stairs':ch==='M'?'merchant-tile':ch==='+'?'door':victoryMode?'floor-victory':'floor';
+            
+            chests.forEach(c=>{if(c.x===x&&c.y===y&&!c.opened){ch=c.type;cls='chest';}});
+            traps.forEach(t=>{if(t.x===x&&t.y===y&&t.discovered){ch=t.type;cls='trap';}});
+            altars.forEach(a=>{if(a.x===x&&a.y===y){ch='π';cls='altar';}});
+            fountains.forEach(f=>{if(f.x===x&&f.y===y){ch='{';cls='fountain';}});
             goldPiles.forEach(g=>{if(g.x===x&&g.y===y){ch='*';cls='gold-tile';}});
+            
+            items.forEach(i=>{
+                if(i.x===x&&i.y===y){
+                    ch=i.glyph;
+                    cls=i.type==='potion'?'item-potion':i.type==='scroll'?'item-scroll':i.type==='wand'?'item-wand':i.type==='ring'?'item-ring':i.type==='food'?'item-food':'floor';
+                }
+            });
+            
+            if(boss && boss.hp > 0 && boss.x===x && boss.y===y){ch=boss.glyph;cls='boss';}
             monsters.forEach(m=>{if(m.hp>0&&m.x===x&&m.y===y){ch=m.glyph;cls='monster';}});
+            
             if(player.x===x&&player.y===y){ch='🤺';cls='player';}
-            out+=`<span class="${cls}">${ch}</span>`;
+            
+            if(cls === 'wall' || cls === 'wall-lit') {
+                out+=`<span style="color:${PRESTIGE_COLORS[colorIdx][cls==='wall'?'wall':'lit']}">${ch}</span>`;
+            } else {
+                out+=`<span class="${cls}">${ch}</span>`;
+            }
         }
         out+='\n';
     }
     game.innerHTML=out;
-    let torchStatus = torchTime > 0 ? `<span class="torch-ui"> 🔥 ${torchTime}s</span>` : "";
+    
+    let tS = torchTime > 0 ? ` <span class="torch-ui">🔥${torchTime}s</span>` : "";
+    let statusEffects = "";
+    if(player.poisoned > 0) statusEffects += " <span class='status-effect'>☠️POI</span>";
+    if(player.frozen > 0) statusEffects += " <span class='status-effect'>❄️FRZ</span>";
+    if(player.confused > 0) statusEffects += " <span class='status-effect'>😵CNF</span>";
+    if(player.hasted > 0) statusEffects += " <span class='status-effect'>⚡HST</span>";
+    if(player.invulnerable > 0) statusEffects += " <span class='status-effect'>🛡️INV</span>";
+    
+    let sS = player.equipment.shield ? ` | 🛡️${player.equipment.shield.durability}/${player.equipment.shield.maxDur||player.equipment.shield.durability}` : "";
+    
     stats.innerHTML = `
-        <span style="color:#ffd700">GOLD: ${player.gold}</span> | <b>HP:</b> ${player.hp}/${player.maxHp} | <b>ATK:</b> ${effectiveAtk()} ${torchStatus}<br>
-        <b>EQUIP:</b> [W: ${player.equipment.weapon?player.equipment.weapon.name:'None'}] [A: ${player.equipment.armor?player.equipment.armor.name:'None'}]
+        <span style="color:#ffd700">💰${player.gold}</span> | <b>HP:</b> ${player.hp}/${player.maxHp} | <b>LVL:</b> ${player.level} | <b>XP:</b> ${player.xp}/${player.xpToNext} | <b>💪STR:</b> ${player.str} | <b>🍀LUCK:</b> ${player.luck}${tS}${statusEffects}<br>
+        <b>ATK:</b> ${effectiveAtk()} | <b>DEF:</b> ${effectiveDef()}${sS} | <b>W:</b> ${player.equipment.weapon?player.equipment.weapon.name:'Fists'} | <b>A:</b> ${player.equipment.armor?player.equipment.armor.name:'None'} | <b>S:</b> ${player.equipment.shield?player.equipment.shield.name:'None'}
     `;
 }
 
+function isBlocked(x, y, self = null) {
+    if(y<0||y>=MAP_H||x<0||x>=MAP_W||map[y][x] === '#') return true;
+    if(player.x === x && player.y === y) return true;
+    if(merchantLoc.x === x && merchantLoc.y === y) return true;
+    if(doors.some(d => d.x === x && d.y === y && !d.open)) return true;
+    if(boss && boss.hp > 0 && boss.x === x && boss.y === y) return true;
+    return monsters.some(m => m !== self && m.hp > 0 && m.x === x && m.y === y);
+}
+
 function move(dx,dy){
+    if(player.frozen > 0) { addLog("You are frozen!"); player.frozen--; monsterTurn(); draw(); return; }
+    if(player.confused > 0) { 
+        dx = [-1,0,1][rand(3)]; 
+        dy = [-1,0,1][rand(3)]; 
+        player.confused--;
+        addLog("You stumble around confused!");
+    }
+    
     let nx=player.x+dx, ny=player.y+dy;
-    if(map[ny][nx]==='#') return;
+    if(ny<0||ny>=MAP_H||nx<0||nx>=MAP_W||map[ny][nx]==='#') return;
+    
+    let door = doors.find(d => d.x === nx && d.y === ny);
+    if(door) {
+        if(door.locked) {
+            addLog("The door is locked!");
+            return;
+        }
+        if(!door.open) {
+            door.open = true;
+            map[ny][nx] = '-';
+            addLog("You open the door.");
+            draw();
+            return;
+        }
+    }
+    
     if(nx===merchantLoc.x && ny===merchantLoc.y){ openMerchant(); return; }
+    
     goldPiles.forEach((g,i)=>{if(g.x===nx&&g.y===ny){player.gold+=g.amt; addLog(`Picked up ${g.amt} gold!`); goldPiles.splice(i,1);}});
+    
+    items.forEach((item,i)=>{
+        if(item.x===nx&&item.y===ny){
+            player.inventory.push(item);
+            addLog(`Picked up ${getItemName(item)}!`);
+            items.splice(i,1);
+        }
+    });
+    
+    let chest = chests.find(c => c.x === nx && c.y === ny && !c.opened);
+    if(chest) {
+        openChest(chest);
+        return;
+    }
+    
+    let altar = altars.find(a => a.x === nx && a.y === ny);
+    if(altar) {
+        useAltar();
+        return;
+    }
+    
+    let fountain = fountains.find(f => f.x === nx && f.y === ny && f.uses > 0);
+    if(fountain) {
+        useFountain(fountain);
+        return;
+    }
+    
+    let trap = traps.find(t => t.x === nx && t.y === ny);
+    if(trap && !trap.discovered) {
+        if(rand(100) < player.luck * 3) {
+            trap.discovered = true;
+            addLog("You narrowly avoid a trap!");
+        } else {
+            triggerTrap(trap);
+        }
+    }
+    
+    if(boss && boss.hp > 0 && boss.x === nx && boss.y === ny) {
+        attackBoss();
+        return;
+    }
+    
     let target = monsters.find(m => m.hp > 0 && m.x === nx && m.y === ny);
-    if(target) {
-        let dmg = effectiveAtk(); target.hp -= dmg;
-        addLog(`You hit ${target.name} for ${dmg}.`);
-        if(target.hp <= 0) addLog(`${target.name} falls!`);
-    } else { player.x=nx; player.y=ny; }
+    if(target) attackMonster(target);
+    else { player.x=nx; player.y=ny; }
+    
     updateExploration();
+    monsterTurn();
+    
+    if(player.poisoned > 0) { player.hp -= 1; addLog("Poison hurts!"); player.poisoned--; if(player.hp <= 0) die({name:"Poison"}); }
+    if(player.hasted > 0) player.hasted--;
+    if(player.invulnerable > 0) player.invulnerable--;
+    
+    if((player.equipment.leftRing?.effect === "regen" || player.equipment.rightRing?.effect === "regen") && turnCount % 3 === 0) {
+        player.hp = Math.min(player.maxHp, player.hp + 1);
+    }
+    
+    turnCount++;
+    draw();
+}
+
+function attackBoss() {
+    let missChance = 10 - (player.luck * 0.5);
+    if(player.equipment.weapon) missChance -= 1;
+    
+    if(rand(100) < missChance) {
+        let penalty = rand(100);
+        if(penalty < 40 && player.equipment.weapon) {
+            addLog(`💥 MISS! Your ${player.equipment.weapon.name} SHATTERS!`);
+            player.equipment.weapon = null;
+        } else if(penalty < 80 && player.equipment.armor) {
+            addLog(`💥 MISS! Your ${player.equipment.armor.name} DISSOLVES!`);
+            player.equipment.armor = null;
+        } else if(player.equipment.shield) {
+            let damage = Math.floor(player.equipment.shield.durability * 0.4);
+            player.equipment.shield.durability -= damage;
+            addLog(`💥 MISS! Your shield takes ${damage} damage!`);
+            if(player.equipment.shield.durability <= 0) {
+                addLog(`Your ${player.equipment.shield.name} breaks!`);
+                player.equipment.shield = null;
+            }
+        } else {
+            addLog(`💥 MISS! You stumble!`);
+        }
+    } else {
+        let dmg = effectiveAtk();
+        boss.hp -= dmg;
+        boss.totalDamage += dmg;
+        addLog(`⚔️ You hit ${boss.name} for ${dmg}! [${boss.hp}/${boss.maxHp}]`);
+        
+        // Boss teleports
+        let room = rooms[0];
+        let attempts = 0;
+        while(attempts < 20) {
+            let newX = room.x + 2 + rand(room.w - 4);
+            let newY = room.y + 2 + rand(room.h - 4);
+            if(!isBlocked(newX, newY) && (Math.abs(newX - player.x) > 3 || Math.abs(newY - player.y) > 3)) {
+                boss.x = newX;
+                boss.y = newY;
+                addLog(`${boss.name} teleports!`);
+                break;
+            }
+            attempts++;
+        }
+        
+        // Spawn monster if < 3 exist
+        let spawnedCount = monsters.filter(m => m.hp > 0).length;
+        if(spawnedCount < 3) {
+            let spawnType = boss.spawns[rand(boss.spawns.length)];
+            let mData = MONSTER_TYPES.find(m => m.n === spawnType);
+            if(mData) {
+                let spawnX = room.x + 2 + rand(room.w - 4);
+                let spawnY = room.y + 2 + rand(room.h - 4);
+                let difficultyMultiplier = 1 + (prestigeLevel * 0.1);
+                monsters.push({
+                    name:mData.n, glyph:mData.g, x:spawnX, y:spawnY,
+                    hp:Math.floor(mData.h * difficultyMultiplier), maxHp:Math.floor(mData.h * difficultyMultiplier),
+                    atk:Math.floor(mData.a * difficultyMultiplier), def:mData.def||0,
+                    ai:mData.ai, special:mData.special, drops:[], turnSkip:0, depth:mData.d
+                });
+                addLog(`${boss.name} summons a ${mData.n}!`);
+            }
+        }
+        
+        if(boss.hp <= 0) {
+            defeatBoss();
+        }
+    }
+    
+    updateBossBar();
     monsterTurn();
     draw();
 }
 
+function defeatBoss() {
+    addLog(`🎉 ${boss.name} is defeated!`);
+    bossDefeated = boss.name;
+    
+    if(prestigeLevel >= 4) {
+        addLog("🌟 FINAL VICTORY! You have conquered all realms!");
+        addLog("The Ethereal Queen bows to your strength!");
+        victoryMode = true;
+        boss = null;
+        monsters = [];
+        document.getElementById('bossBar').style.display = 'none';
+        generateLevel();
+        draw();
+        return;
+    }
+    
+    setTimeout(() => {
+        addLog("You feel confused... was it all a dream?");
+        addLog("The hunt continues...");
+        
+        // Reset everything
+        prestigeLevel++;
+        depth = 1;
+        
+        // Complete stat reset
+        player.hp = 30;
+        player.maxHp = 30;
+        player.atk = 3;
+        player.def = 1;
+        player.str = 16;
+        player.xp = 0;
+        player.level = 1;
+        player.luck = 5;
+        player.xpToNext = 100;
+        
+        // Clear all equipment and inventory
+        player.equipment = {weapon:null, armor:null, shield:null, leftRing:null, rightRing:null};
+        player.inventory = [];
+        
+        // Give 5 torches
+        for(let i=0; i<5; i++) {
+            player.inventory.push({name:"🔥 Torch", type:"torch", cost:5});
+        }
+        
+        // Apply confusion
+        player.confused = 8;
+        addLog("You feel disoriented and confused!");
+        
+        // Heal to max minus 5
+        player.hp = player.maxHp - 5;
+        
+        boss = null;
+        isBossRoom = false;
+        document.getElementById('bossBar').style.display = 'none';
+        
+        generateLevel();
+        draw();
+    }, 2000);
+}
+
+function searchArea(){
+    let found = false;
+    let searchBonus = player.luck * 5;
+    let hasSearchRing = player.equipment.leftRing?.effect === "searching" || player.equipment.rightRing?.effect === "searching";
+    
+    for(let dy=-1; dy<=1; dy++) {
+        for(let dx=-1; dx<=1; dx++) {
+            let x = player.x + dx, y = player.y + dy;
+            
+            let trap = traps.find(t => t.x === x && t.y === y && !t.discovered);
+            if(trap) {
+                let chance = 40 + searchBonus + (hasSearchRing ? 30 : 0);
+                if(rand(100) < chance) {
+                    trap.discovered = true;
+                    addLog(`You found a trap!`);
+                    found = true;
+                }
+            }
+            
+            let door = doors.find(d => d.x === x && d.y === y && d.secret);
+            if(door) {
+                let chance = 30 + searchBonus + (hasSearchRing ? 30 : 0);
+                if(rand(100) < chance) {
+                    door.secret = false;
+                    map[y][x] = '+';
+                    addLog(`You found a secret door!`);
+                    found = true;
+                }
+            }
+        }
+    }
+    if(!found) addLog("You search but find nothing.");
+    monsterTurn();
+    draw();
+}
+
+function openChest(chest) {
+    if(chest.locked) {
+        addLog("The chest is locked!");
+        return;
+    }
+    if(chest.trapped) {
+        addLog("The chest was trapped!");
+        player.hp -= 5 + rand(10);
+        if(player.hp <= 0) die({name:"Trapped Chest"});
+    }
+    chest.opened = true;
+    
+    let goldAmt = 30 + rand(50) + (player.luck * 5);
+    player.gold += goldAmt;
+    addLog(`Found ${goldAmt} gold in the chest!`);
+    
+    let itemChance = 60 + (player.luck * 2);
+    if(rand(100) < itemChance) {
+        spawnRandomItem(chest.x, chest.y);
+        addLog("There's an item in the chest!");
+    }
+    
+    draw();
+}
+
+function useAltar() {
+    if(player.gold >= 50) {
+        player.gold -= 50;
+        let blessing = rand(100);
+        if(blessing < 40) {
+            player.maxHp += 5;
+            player.hp += 5;
+            addLog("The altar blesses you! Max HP increased!");
+        } else if(blessing < 70) {
+            player.atk += 1;
+            addLog("The altar blesses you! Attack increased!");
+        } else {
+            addLog("You feel a holy presence...");
+        }
+    } else {
+        addLog("You need 50 gold to make an offering.");
+    }
+    draw();
+}
+
+function useFountain(fountain) {
+    fountain.uses--;
+    let effect = rand(100);
+    if(effect < 30) {
+        let heal = 10 + rand(15);
+        player.hp = Math.min(player.maxHp, player.hp + heal);
+        addLog(`The water heals you for ${heal} HP!`);
+    } else if(effect < 50) {
+        player.hp -= 5;
+        addLog("The water was poisonous!");
+    } else if(effect < 70) {
+        player.str += 1;
+        addLog("You feel stronger!");
+    } else {
+        addLog("The water tastes refreshing.");
+    }
+    
+    if(fountain.uses <= 0) addLog("The fountain dries up.");
+    draw();
+}
+
+function triggerTrap(trap) {
+    trap.discovered = true;
+    addLog(`You triggered a trap!`);
+    
+    switch(trap.type) {
+        case '^':
+            player.hp -= 5 + rand(10);
+            addLog("A dart hits you!");
+            break;
+        case 'v':
+            player.hp -= 10 + rand(15);
+            addLog("You fall into a pit!");
+            break;
+        case '~':
+            player.x = rooms[rand(rooms.length)].x + 2;
+            player.y = rooms[rand(rooms.length)].y + 2;
+            addLog("You are teleported!");
+            break;
+        case '"':
+            player.confused = 5;
+            addLog("Gas makes you confused!");
+            break;
+        case '!':
+            addLog("An alarm sounds! Monsters awaken!");
+            break;
+        case '_':
+            player.frozen = 2;
+            addLog("A bear trap holds you!");
+            break;
+    }
+    
+    if(player.hp <= 0) die({name:"Trap"});
+}
+
+function getItemName(item) {
+    if(item.type === 'scroll') {
+        if(identifiedItems.scrolls[item.subtype]) return `Scroll of ${item.subtype}`;
+        return `${scrollColors[SCROLLS.findIndex(s=>s.name===item.subtype)]} scroll`;
+    }
+    if(item.type === 'potion') {
+        if(identifiedItems.potions[item.subtype]) return `Potion of ${item.subtype}`;
+        return `${potionColors[POTIONS.findIndex(p=>p.name===item.subtype)]} potion`;
+    }
+    if(item.type === 'wand') {
+        if(identifiedItems.wands[item.subtype]) return `Wand of ${item.subtype} (${item.charges})`;
+        return `${wandMaterials[WANDS.findIndex(w=>w.name===item.subtype)]} wand (${item.charges})`;
+    }
+    if(item.type === 'ring') {
+        if(identifiedItems.rings[item.subtype]) return `Ring of ${item.subtype}`;
+        return `${ringGems[RINGS.findIndex(r=>r.name===item.subtype)]} ring`;
+    }
+    if(item.type === 'food') return 'Food Ration';
+    return item.name || item.subtype;
+}
+
+function attackMonster(m) {
+    let isCrit = rand(100) < (player.luck * 2);
+    let dmg = effectiveAtk();
+    if(isCrit) {
+        dmg *= 2;
+        addLog(`⚔️ CRITICAL HIT!`);
+    }
+    
+    m.hp -= dmg;
+    addLog(`You hit ${m.name} for ${dmg}.`);
+    
+    if(m.hp <= 0) {
+        addLog(`${m.name} falls!`);
+        
+        let xpGain = Math.floor((m.depth * 10) + (m.maxHp / 2));
+        gainXP(xpGain);
+        
+        let dropChance = 20 + (player.luck * 2);
+        
+        if(m.drops.length > 0 && rand(100) < 20) {
+            let dropName = m.drops[rand(m.drops.length)];
+            let drop = findEquipment(dropName);
+            if(drop) { 
+                player.inventory.push(drop); 
+                addLog(`⭐ ${drop.name} dropped!`); 
+            }
+        }
+        else if(rand(100) < dropChance) {
+            spawnRandomItem(m.x, m.y);
+            addLog(`${m.name} dropped something!`);
+        }
+    }
+}
+
+function findEquipment(name) {
+    let item = WEAPONS.find(w=>w.name===name) || ARMOR.find(a=>a.name===name) || SHIELDS.find(s=>s.name===name);
+    if(!item) return null;
+    let res = {...item};
+    if(WEAPONS.includes(item)) res.type="weapon";
+    if(ARMOR.includes(item)) res.type="armor";
+    if(SHIELDS.includes(item)) { res.type="shield"; res.maxDur = res.durability; }
+    return res;
+}
+
 function monsterTurn(){
+    if(boss && boss.hp > 0) {
+        let d = Math.sqrt((player.x-boss.x)**2 + (player.y-boss.y)**2);
+        if(d <= 1.5) attackPlayer(boss);
+    }
+    
     monsters.forEach(m=>{
         if(m.hp <= 0) return;
-        let dist = Math.sqrt((player.x-m.x)**2 + (player.y-m.y)**2);
-        if(dist > 8) return; 
-        let dx=Math.sign(player.x-m.x), dy=Math.sign(player.y-m.y);
-        if(m.x+dx === player.x && m.y+dy === player.y) {
-            let dmg = Math.max(1, m.atk - effectiveDef());
-            player.hp -= dmg; addLog(`${m.name} hits for ${dmg}!`);
-            if(player.hp <= 0) die(m);
-        } else if(map[m.y+dy][m.x+dx] === '.') { m.x+=dx; m.y+=dy; }
+        if(m.turnSkip > 0) { m.turnSkip--; return; }
+        let d = Math.sqrt((player.x-m.x)**2 + (player.y-m.y)**2);
+        
+        if(m.ai === "chase" && d <= 8) moveMonsterToward(m);
+        else if(m.ai === "ranged") {
+            if (d > 3 && d <= 8) moveMonsterToward(m);
+            else if (d < 3) moveMonsterAway(m);
+        }
+        else if(m.ai === "fast" && d <= 10) { moveMonsterToward(m); moveMonsterToward(m); }
+        else if(m.ai === "erratic") { if(rand(2)) moveMonsterRandom(m); else if(d<=8) moveMonsterToward(m); }
+
+        if (Math.abs(m.x-player.x)<=1 && Math.abs(m.y-player.y)<=1) attackPlayer(m);
+        else if ((m.ai === "ranged" || m.special === "ranged") && d <= 3.5) attackPlayer(m);
     });
+}
+
+function moveMonsterToward(m) {
+    let dx = Math.sign(player.x - m.x), dy = Math.sign(player.y - m.y);
+    if(!isBlocked(m.x + dx, m.y + dy, m)) { m.x += dx; m.y += dy; }
+    else if(!isBlocked(m.x + dx, m.y, m)) m.x += dx;
+    else if(!isBlocked(m.x, m.y + dy, m)) m.y += dy;
+}
+
+function moveMonsterAway(m) {
+    let dx = -Math.sign(player.x - m.x), dy = -Math.sign(player.y - m.y);
+    if(!isBlocked(m.x + dx, m.y + dy, m)) { m.x += dx; m.y += dy; }
+}
+
+function moveMonsterRandom(m) {
+    let dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+    let dir = dirs[rand(4)];
+    if(!isBlocked(m.x + dir[0], m.y + dir[1], m)) { m.x += dir[0]; m.y += dir[1]; }
+}
+
+function attackPlayer(m) {
+    if(player.invulnerable > 0) {
+        addLog(`${m.name} attacks but you are invulnerable!`);
+        return;
+    }
+    
+    let dmg = Math.max(1, m.atk - effectiveDef());
+    if(player.equipment.shield) {
+        player.equipment.shield.durability--;
+        if(player.equipment.shield.durability <= 0) { addLog(`Your ${player.equipment.shield.name} breaks!`); player.equipment.shield = null; }
+    }
+    player.hp -= dmg;
+    addLog(`${m.name} hits for ${dmg}!`);
+    if(m.special === "poison") { player.poisoned = 5; addLog("You are poisoned!"); }
+    if(m.special === "freeze" && rand(100) < 30) { player.frozen = 1; addLog("You are frozen!"); }
+    if(player.hp <= 0) die(m);
+}
+
+function openActionMenu(){
+    let menu = document.getElementById('actionMenu');
+    menu.style.display='block';
+    menu.innerHTML=`<h2>⚡ ACTIONS</h2>`;
+    menu.innerHTML += `
+        <div class="action-item" onclick="openScrollList()">
+            <span>📖 (R) Read Scroll</span>
+        </div>
+        <div class="action-item" onclick="openPotionList()">
+            <span>🧪 (Q) Quaff Potion</span>
+        </div>
+        <div class="action-item" onclick="openWandList()">
+            <span>⚡ (Z) Zap Wand</span>
+        </div>
+        <div class="action-item" onclick="descend()">
+            <span>⬇️ (>) Descend Stairs</span>
+        </div>
+    `;
+    menu.innerHTML += '<br><button onclick="document.getElementById(\'actionMenu\').style.display=\'none\'" style="width:100%; padding:15px;">CLOSE</button>';
+}
+
+function openScrollList(){
+    document.getElementById('actionMenu').style.display='none';
+    let scrolls = player.inventory.filter(i => i.type === 'scroll');
+    if(scrolls.length === 0) {
+        addLog("You have no scrolls!");
+        return;
+    }
+    
+    let menu = document.getElementById('scrollList');
+    menu.style.display='block';
+    menu.innerHTML='<h2>📖 READ SCROLL</h2>';
+    scrolls.forEach((scroll, i) => {
+        menu.innerHTML += `<div class="action-item" onclick="readScroll(${player.inventory.indexOf(scroll)})">
+            <span>${getItemName(scroll)}</span>
+        </div>`;
+    });
+    menu.innerHTML += '<br><button onclick="document.getElementById(\'scrollList\').style.display=\'none\'" style="width:100%; padding:15px;">CLOSE</button>';
+}
+
+function readScroll(idx){
+    document.getElementById('scrollList').style.display='none';
+    let scroll = player.inventory[idx];
+    if(!scroll || scroll.type !== 'scroll') return;
+    
+    identifiedItems.scrolls[scroll.subtype] = true;
+    addLog(`You read the Scroll of ${scroll.subtype}!`);
+    
+    switch(scroll.effect) {
+        case 'map':
+            for(let y=0; y<MAP_H; y++) explored[y].fill(true);
+            addLog("The map is revealed!");
+            break;
+        case 'teleport':
+            player.x = rooms[rand(rooms.length)].x + 2;
+            player.y = rooms[rand(rooms.length)].y + 2;
+            addLog("You are teleported!");
+            break;
+        case 'light':
+            updateExploration();
+            for(let dy=-10; dy<=10; dy++) {
+                for(let dx=-10; dx<=10; dx++) {
+                    if(explored[player.y+dy]) explored[player.y+dy][player.x+dx] = true;
+                }
+            }
+            addLog("Light fills the area!");
+            break;
+        case 'enchant_weapon':
+            if(player.equipment.weapon) {
+                player.equipment.weapon.bonus += 1;
+                addLog(`Your ${player.equipment.weapon.name} glows brighter!`);
+            } else {
+                addLog("You have no weapon to enchant.");
+            }
+            break;
+        case 'enchant_armor':
+            if(player.equipment.armor) {
+                player.equipment.armor.bonus += 1;
+                addLog(`Your ${player.equipment.armor.name} feels stronger!`);
+            } else {
+                addLog("You have no armor to enchant.");
+            }
+            break;
+        case 'identify':
+            addLog("Identify scroll - select item (not implemented yet)");
+            break;
+        default:
+            addLog(`${scroll.subtype} effect activated!`);
+    }
+    
+    player.inventory.splice(idx, 1);
+    draw();
+}
+
+function openPotionList(){
+    document.getElementById('actionMenu').style.display='none';
+    let potions = player.inventory.filter(i => i.type === 'potion');
+    if(potions.length === 0) {
+        addLog("You have no potions!");
+        return;
+    }
+    
+    let menu = document.getElementById('potionList');
+    menu.style.display='block';
+    menu.innerHTML='<h2>🧪 QUAFF POTION</h2>';
+    potions.forEach((potion, i) => {
+        menu.innerHTML += `<div class="action-item" onclick="quaffPotion(${player.inventory.indexOf(potion)})">
+            <span>${getItemName(potion)}</span>
+        </div>`;
+    });
+    menu.innerHTML += '<br><button onclick="document.getElementById(\'potionList\').style.display=\'none\'" style="width:100%; padding:15px;">CLOSE</button>';
+}
+
+function quaffPotion(idx){
+    document.getElementById('potionList').style.display='none';
+    let potion = player.inventory[idx];
+    if(!potion || potion.type !== 'potion') return;
+    
+    identifiedItems.potions[potion.subtype] = true;
+    addLog(`You drink the Potion of ${potion.subtype}!`);
+    
+    switch(potion.effect) {
+        case 'heal':
+            player.hp = Math.min(player.maxHp, player.hp + potion.amount);
+            addLog(`Healed ${potion.amount} HP!`);
+            break;
+        case 'full_heal':
+            player.hp = player.maxHp;
+            addLog("Fully healed!");
+            break;
+        case 'strength':
+            player.str += 1;
+            player.atk += 1;
+            addLog("You feel stronger!");
+            break;
+        case 'poison':
+            player.poisoned = 10;
+            addLog("You are poisoned!");
+            break;
+        case 'confusion':
+            player.confused = 10;
+            addLog("You are confused!");
+            break;
+        case 'haste':
+            player.hasted = 20;
+            addLog("You feel faster!");
+            break;
+        case 'invulnerable':
+            player.invulnerable = 10;
+            addLog("You are invulnerable!");
+            break;
+        default:
+            addLog(`${potion.subtype} effect activated!`);
+    }
+    
+    player.inventory.splice(idx, 1);
+    draw();
+}
+
+function openWandList(){
+    document.getElementById('actionMenu').style.display='none';
+    let wands = player.inventory.filter(i => i.type === 'wand');
+    if(wands.length === 0) {
+        addLog("You have no wands!");
+        return;
+    }
+    
+    let menu = document.getElementById('wandList');
+    menu.style.display='block';
+    menu.innerHTML='<h2>⚡ ZAP WAND</h2>';
+    wands.forEach((wand, i) => {
+        menu.innerHTML += `<div class="action-item" onclick="zapWand(${player.inventory.indexOf(wand)})">
+            <span>${getItemName(wand)}</span>
+        </div>`;
+    });
+    menu.innerHTML += '<br><button onclick="document.getElementById(\'wandList\').style.display=\'none\'" style="width:100%; padding:15px;">CLOSE</button>';
+}
+
+function zapWand(idx){
+    document.getElementById('wandList').style.display='none';
+    let wand = player.inventory[idx];
+    if(!wand || wand.type !== 'wand') return;
+    
+    if(wand.charges <= 0) {
+        addLog("The wand is out of charges!");
+        return;
+    }
+    
+    identifiedItems.wands[wand.subtype] = true;
+    wand.charges--;
+    addLog(`You zap the Wand of ${wand.subtype}!`);
+    
+    let targetList = monsters.filter(m=>m.hp>0);
+    if(boss && boss.hp > 0) targetList.push(boss);
+    
+    let nearest = targetList.sort((a,b)=>{
+        let dA = Math.sqrt((player.x-a.x)**2 + (player.y-a.y)**2);
+        let dB = Math.sqrt((player.x-b.x)**2 + (player.y-b.y)**2);
+        return dA - dB;
+    })[0];
+    
+    if(nearest) {
+        switch(wand.effect) {
+            case 'magic_missile':
+                nearest.hp -= 10 + rand(10);
+                addLog(`Magic missile hits ${nearest.name} for damage!`);
+                break;
+            case 'cold':
+                nearest.hp -= 8;
+                nearest.turnSkip = 3;
+                addLog(`${nearest.name} is frozen!`);
+                break;
+            case 'sleep':
+                nearest.turnSkip = 5;
+                addLog(`${nearest.name} falls asleep!`);
+                break;
+            case 'death':
+                if(nearest.hp < 40) {
+                    nearest.hp = 0;
+                    addLog(`${nearest.name} dies instantly!`);
+                } else {
+                    nearest.hp -= 20;
+                    addLog(`${nearest.name} resists death!`);
+                }
+                break;
+            default:
+                addLog(`${wand.subtype} effect activated!`);
+        }
+        
+        if(nearest.hp <= 0) {
+            addLog(`${nearest.name} falls!`);
+            if(nearest === boss) {
+                defeatBoss();
+            } else {
+                let xpGain = Math.floor((nearest.depth * 10) + (nearest.maxHp / 2));
+                gainXP(xpGain);
+            }
+        }
+    } else {
+        addLog("Nothing happens.");
+    }
+    
+    if(boss) updateBossBar();
+    draw();
 }
 
 function openMerchant(){
     let m = document.getElementById('merchant');
     m.style.display='block';
-    m.innerHTML='<h2 style="color:#00ff00">THE MERCHANT</h2>';
+    m.innerHTML=`<h2 style="color:#00ff00">THE MERCHANT</h2><p style="color:#ffd700">GOLD: ${player.gold}</p>`;
+    if(healPotionAvailable) m.innerHTML += `<div class="shop-item"><span>💖 Heal All - ${healPotionPrice}g</span><button onclick="buyHeal()">BUY</button></div>`;
     merchantItems.forEach((item, i) => {
-        m.innerHTML += `<div class="shop-item">
-            <span><b>${item.name}</b> - ${item.cost}g</span>
-            <button onclick="buyItem(${i})">BUY</button>
-        </div>`;
+        m.innerHTML += `<div class="shop-item"><span>${item.name} - ${item.cost}g</span><button onclick="buyItem(${i})">BUY</button></div>`;
     });
-    m.innerHTML += '<br><button onclick="document.getElementById(\'merchant\').style.display=\'none\'">Leave Shop</button>';
+    m.innerHTML += '<br><button onclick="document.getElementById(\'merchant\').style.display=\'none\'">Close</button>';
+}
+
+function buyHeal(){
+    if(player.gold >= healPotionPrice){ player.gold -= healPotionPrice; player.hp = player.maxHp; addLog("Fully healed!"); healPotionPrice *= 2; openMerchant(); draw(); }
 }
 
 function buyItem(idx){
     let item = merchantItems[idx];
     if(player.gold >= item.cost){
         player.gold -= item.cost;
-        player.inventory.push({...item});
+        let ni = {...item};
+        if(ni.type === "shield") ni.maxDur = ni.durability;
+        if(ni.type === "scroll") ni.glyph = '?';
+        player.inventory.push(ni);
         addLog(`Bought ${item.name}!`);
         openMerchant();
         draw();
-    } else { alert("Not enough gold!"); }
+    }
 }
 
 function openInventory(){
     let inv = document.getElementById('inventory');
     inv.style.display='block';
-    inv.innerHTML='<h2>INVENTORY</h2>';
+    inv.innerHTML='<h2>🎒 INVENTORY</h2>';
     player.inventory.forEach((item, i) => {
+        let itemName = item.name || getItemName(item);
+        let sellPrice = Math.floor((item.cost || 0) * 0.25);
         inv.innerHTML += `<div class="shop-item">
-            <span>${item.name}</span>
-            <button onclick="handleItem(${i})">USE/EQUIP</button>
+            <span>${itemName}</span>
+            <div>
+                <button onclick="handleItem(${i})" style="margin-right:5px;">USE/EQUIP</button>
+                ${item.cost ? `<button onclick="sellItem(${i})">SELL ${sellPrice}g</button>` : ''}
+            </div>
         </div>`;
     });
     inv.innerHTML += '<br><button onclick="document.getElementById(\'inventory\').style.display=\'none\'">Close</button>';
 }
 
+function sellItem(n) {
+    let item = player.inventory[n];
+    if(!item.cost) {
+        addLog("This item cannot be sold.");
+        return;
+    }
+    
+    let sellPrice = Math.floor(item.cost * 0.25);
+    player.gold += sellPrice;
+    addLog(`Sold ${item.name || getItemName(item)} for ${sellPrice} gold!`);
+    player.inventory.splice(n, 1);
+    openInventory();
+    draw();
+}
+
 function handleItem(n) {
     let item = player.inventory[n];
-    if(item.type === "torch") { startTorch(); player.inventory.splice(n, 1); } 
-    else if(item.type === "usable") { for(let y=0; y<MAP_H; y++) for(let x=0; x<MAP_W; x++) explored[y][x] = true; player.inventory.splice(n, 1); } 
-    else {
-        if(item.type === "weapon") player.equipment.weapon = item;
-        if(item.type === "armor") player.equipment.armor = item;
-        player.inventory.splice(n,1);
+    
+    if(item.type === "torch") {
+        startTorch();
+        player.inventory.splice(n, 1);
     }
+    else if(item.type === "food") {
+        player.hp = Math.min(player.maxHp, player.hp + 5);
+        if(player.poisoned > 0) {
+            player.poisoned = 0;
+            addLog("The food cures your poison!");
+        }
+        player.hunger = Math.min(1000, player.hunger + 200);
+        addLog("You eat the food ration. (+5 HP)");
+        player.inventory.splice(n, 1);
+    }
+    else if(item.type === "weapon") {
+        if(player.equipment.weapon) player.inventory.push(player.equipment.weapon);
+        player.equipment.weapon = item;
+        player.inventory.splice(n, 1);
+        addLog(`Equipped ${item.name}!`);
+    }
+    else if(item.type === "armor") {
+        if(player.equipment.armor) player.inventory.push(player.equipment.armor);
+        player.equipment.armor = item;
+        player.inventory.splice(n, 1);
+        addLog(`Equipped ${item.name}!`);
+    }
+    else if(item.type === "shield") {
+        if(player.equipment.shield) player.inventory.push(player.equipment.shield);
+        player.equipment.shield = item;
+        player.inventory.splice(n, 1);
+        addLog(`Equipped ${item.name}!`);
+    }
+    else if(item.type === "ring") {
+        if(!player.equipment.leftRing) {
+            player.equipment.leftRing = item;
+            player.inventory.splice(n, 1);
+            addLog(`Equipped ${getItemName(item)} on left hand!`);
+        } else if(!player.equipment.rightRing) {
+            player.equipment.rightRing = item;
+            player.inventory.splice(n, 1);
+            addLog(`Equipped ${getItemName(item)} on right hand!`);
+        } else {
+            addLog("Both ring slots are full!");
+        }
+    }
+    else {
+        addLog("Use action menu to use this item.");
+    }
+    
     document.getElementById('inventory').style.display='none';
     draw();
 }
 
-function waitTurn(){ monsterTurn(); draw(); }
-function descend(){ if(player.x===stairs.x && player.y===stairs.y){ depth++; generateLevel(); draw(); } }
-
-function die(m){ 
-    let rip = document.getElementById('rip');
-    rip.style.display='block'; 
-    rip.innerHTML=`
-<pre style="display:inline-block; text-align:left;">
-      _________________
-     /                 \\
-    /    R. I. P.       \\
-   /                     \\
-  /   ${player.name.padEnd(14, ' ')}  \\
- /    Killed by a        \\
- |    ${m.name.padEnd(14, ' ')} |
- |    On Floor ${depth.toString().padEnd(10, ' ')}|
- |                       |
- |      * * * * |
- |_______________________|
-</pre>
-<br><button onclick="location.reload()" style="margin-top:20px; padding:10px 20px;">RESTART</button>`; 
+function showBossWarning() {
+    let warn = document.getElementById('bossWarning');
+    warn.style.display='block';
+    warn.innerHTML=`
+        <h2 style="color:#ff0000;">⚠️ WARNING ⚠️</h2>
+        <p style="font-size:18px;">You sense a powerful presence ahead...</p>
+        <p>The air grows heavy with dread.</p>
+        <p style="color:#ffd700;">Do you dare to continue?</p>
+        <br>
+        <button onclick="enterBossRoom()" style="padding:15px 30px; font-size:18px; margin:10px; background:#ff0000; border-color:#ff0000;">YES - FACE THE BOSS</button>
+        <button onclick="document.getElementById('bossWarning').style.display='none'" style="padding:15px 30px; font-size:18px; margin:10px;">NO - RETREAT</button>
+    `;
 }
 
-function startGame(){ 
+function enterBossRoom() {
+    document.getElementById('bossWarning').style.display='none';
+    generateBossRoom();
+    draw();
+}
+
+function descend(){
+    document.getElementById('actionMenu').style.display='none';
+    if(player.x===stairs.x && player.y===stairs.y){
+        if(depth === 10) {
+            showBossWarning();
+        } else {
+            depth++;
+            addLog(`Descending to level ${depth}...`);
+            let best = localStorage.getItem('rogueBestFloor') || 0;
+            if(depth > best) localStorage.setItem('rogueBestFloor', depth);
+            if(player.equipment.shield?.special === "repair") player.equipment.shield.durability = player.equipment.shield.maxDur;
+            generateLevel();
+            draw();
+        }
+    } else {
+        addLog("No stairs here!");
+    }
+}
+
+function die(m){
+    let rip = document.getElementById('rip');
+    rip.style.display = 'block';
+    const s = (str) => str.substring(0, 28).padEnd(28, ' ');
+    const f = (str) => str.substring(0, 28).toUpperCase().padEnd(28, ' ');
+    let dName  = f(player.name);
+    let dKill  = s("SLAIN BY: " + m.name);
+    let dFloor = s("REACHED FLOOR: " + depth);
+    let dLevel = s("FINAL LEVEL: " + player.level);
+    let dGold  = s("TREASURE: " + player.gold + " GOLD");
+    let dBoss  = bossDefeated ? s("DEFEATED: " + bossDefeated) : "";
+    let dWep   = s("WEAPON: " + (player.equipment.weapon ? player.equipment.weapon.name : "FISTS"));
+    let dArm   = s("ARMOR:  " + (player.equipment.armor ? player.equipment.armor.name : "NONE"));
+    let dShd   = s("SHIELD: " + (player.equipment.shield ? player.equipment.shield.name : "NONE"));
+    let grassChars = ["ww","vv","w",",,","\"\"","v"];
+    let grassColors = ["#2ecc71", "#27ae60", "#229954", "#1d8348"];
+    let grassLine = "";
+    for(let i=0; i<50; i++) {
+        let char = grassChars[Math.floor(Math.random()*grassChars.length)];
+        let color = grassColors[Math.floor(Math.random()*grassColors.length)];
+        grassLine += `<span style="color:${color}">${char}</span>`;
+    }
+    rip.innerHTML = `
+<pre style="display:inline-block; text-align:left; font-family:monospace; line-height:1.1; font-size:13px; color:#d1d1d1; text-shadow: 3px 3px 5px #000;">
+                | |
+                | |
+                | |
+          ______| |______
+         |______   ______|
+                | |
+                | |
+                | |
+         _______| |_______
+        /                 \\
+       |        RIP        |
+    ___|___________________|___
+   /                           \\
+  |   _______________________   |
+  |  /                       \\  |
+  | |  ${dName}  | |
+  | |                         | |
+  | |  ${dKill}  | |
+  | |                         | |
+  | |  ${dFloor}  | |
+  | |  ${dLevel}  | |
+  | |  ${dGold}  | |
+  ${dBoss ? `| |  ${dBoss}  | |` : ''}
+  | |                         | |
+  | |  EQUIPMENT RECOVERY:    | |
+  | |  ${dWep}  | |
+  | |  ${dArm}  | |
+  | |  ${dShd}  | |
+  | |                         | |
+  |  \\_______________________/  |
+  |                             |
+  |_____________________________|
+ [_______________________________]
+</pre>
+<div style="margin-top:-8px; font-family:monospace; letter-spacing:1px; margin-bottom:10px;">${grassLine}</div>
+<button onclick="location.reload()" class="pulse-btn" style="padding:15px 30px; font-size:18px; font-family:monospace; background:#111; color:#d1d1d1; border:2px solid #d1d1d1; border-radius:4px; cursor:pointer; font-weight:bold;">NEW ADVENTURE</button>`;
+}
+
+function startGame(){
     player.name = document.getElementById('playerNameInput').value || "Adventurer";
-    document.getElementById('titleScreen').style.display='none'; 
+    document.getElementById('titleScreen').style.display='none';
+    
+    scrollColors.sort(() => Math.random() - 0.5);
+    potionColors.sort(() => Math.random() - 0.5);
+    wandMaterials.sort(() => Math.random() - 0.5);
+    ringGems.sort(() => Math.random() - 0.5);
+    
+    player.equipment.armor = {...ARMOR[0], type:"armor"};
+    
     generateLevel(); 
-    draw(); 
+    draw();
 }
 </script>
 </body>
